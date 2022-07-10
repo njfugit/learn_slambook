@@ -1,0 +1,30 @@
+{   
+    "version": "2.0.0",
+    "options": {
+        "cwd": "${workspaceFolder}/build"
+    },
+    "tasks": [
+        {
+            "label": "cmake",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                ".."
+            ]
+        },
+        {
+            "label": "make",          
+            "type": "shell",
+            "command": "make",  //-j n 电脑几核就可以写几，加快编译速度
+        },
+        {
+            "label": "run_make",
+			"dependsOrder": "sequence", // 按列出的顺序执行任务依赖项
+            "dependsOn":[
+                "cmake",
+                "make"
+            ]
+        }
+        
+    ]
+}
