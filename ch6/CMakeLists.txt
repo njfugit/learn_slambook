@@ -23,7 +23,7 @@ include_directories("/usr/include/eigen3")
 
 add_executable(gaussNewton gaussNewton.cpp)
 target_link_libraries(gaussNewton ${OpenCV_LIBS})
-add_executable(gaussnewton gaussnewton.cpp)
+add_executable(gaussnewton gnewton.cpp)
 target_link_libraries(gaussnewton ${OpenCV_LIBS})
 
 add_executable(ceresCurveFitting ceresCurveFitting.cpp)
@@ -31,6 +31,8 @@ target_link_libraries(ceresCurveFitting ${OpenCV_LIBS} ${CERES_LIBRARIES})
 
 add_executable(cerescf ceres.cpp)
 target_link_libraries(cerescf ${OpenCV_LIBS} ${CERES_LIBRARIES})
+add_executable(ceresmore ceres_more.cpp)
+target_link_libraries(ceresmore ${OpenCV_LIBS} ${CERES_LIBRARIES})
 
 add_executable(g2oCurveFitting g2oCurveFitting.cpp)
 target_link_libraries(g2oCurveFitting ${OpenCV_LIBS} ${G2O_CORE_LIBRARY} ${G2O_STUFF_LIBRARY})

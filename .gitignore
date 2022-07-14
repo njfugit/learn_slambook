@@ -34,4 +34,8 @@
 *cmake-build-*
 *.idea
 **build**
+<<<<<<< HEAD
 *.vscode*
+=======
+**.vscode**
+>>>>>>> 354d5e8c3347037c3913373b39fd52c4e88f3003

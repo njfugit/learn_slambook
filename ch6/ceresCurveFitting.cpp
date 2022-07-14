@@ -1,3 +1,12 @@
+/*
+ * @Author: Jack
+ * @Date: 2022-07-13 21:22:06
+ * @LastEditTime: 2022-07-13 21:29:37
+ * @LastEditors: your name
+ * @Description: koro1FileHeader
+ * @FilePath: /ch6/ceresCurveFitting.cpp
+ * 可以输入预定的版权声明、个性签名、空行等
+ */
 //
 // Created by xiang on 18-11-19.
 //
