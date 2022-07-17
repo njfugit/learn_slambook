@@ -36,3 +36,6 @@ target_link_libraries(ceresmore ${OpenCV_LIBS} ${CERES_LIBRARIES})
 
 add_executable(g2oCurveFitting g2oCurveFitting.cpp)
 target_link_libraries(g2oCurveFitting ${OpenCV_LIBS} ${G2O_CORE_LIBRARY} ${G2O_STUFF_LIBRARY})
+
+add_executable(myg2o g2o.cpp)
+target_link_libraries(myg2o ${OpenCV_LIBS} ${G2O_CORE_LIBRARY} ${G2O_STUFF_LIBRARY})
