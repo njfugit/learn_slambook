@@ -342,7 +342,7 @@ int ORB_pattern[256 * 4] = {
 // compute the descriptor
 void ComputeORB(const cv::Mat &img, vector<cv::KeyPoint> &keypoints, vector<DescType> &descriptors) {
   const int half_patch_size = 8;
-  const int half_boundary = 16;
+  const int half_boundary = 16;//图像边界扩充半径
   int bad_points = 0;
   for (auto &kp: keypoints) {
     if (kp.pt.x < half_boundary || kp.pt.y < half_boundary ||
@@ -368,6 +368,7 @@ void ComputeORB(const cv::Mat &img, vector<cv::KeyPoint> &keypoints, vector<Desc
     float cos_theta = m10 / m_sqrt;
 
     // compute the angle of this point
+    //brief描述子是　32 * 8　=　256位　每比较８位需要查询16个随机像素点
     DescType desc(8, 0);
     for (int i = 0; i < 8; i++) {
       uint32_t d = 0;
@@ -377,6 +378,12 @@ void ComputeORB(const cv::Mat &img, vector<cv::KeyPoint> &keypoints, vector<Desc
         cv::Point2f q(ORB_pattern[idx_pq * 4 + 2], ORB_pattern[idx_pq * 4 + 3]);
 
         // rotate with theta
+        /**
+         * @brief  (x',y')^T = Matrix |cos_theta, -sin_theta|  * (x, y)^T
+         *                            |sin_theta, cos_theata|
+         * 
+         */
+        //之所以此处需要+ kp.pt的原因是上述随机点对选择是以关键点为中心选择的
         cv::Point2f pp = cv::Point2f(cos_theta * p.x - sin_theta * p.y, sin_theta * p.x + cos_theta * p.y)
                          + kp.pt;
         cv::Point2f qq = cv::Point2f(cos_theta * q.x - sin_theta * q.y, sin_theta * q.x + cos_theta * q.y)

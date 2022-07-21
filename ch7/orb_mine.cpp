@@ -1,7 +1,7 @@
 /*
  * @Author: Jack
  * @Date: 2022-07-20 01:14:18
- * @LastEditTime: 2022-07-20 23:34:01
+ * @LastEditTime: 2022-07-21 22:08:13
  * @LastEditors: your name
  * @Description: koro1FileHeader
  * @FilePath: /ch7/orb_mine.cpp
@@ -338,5 +338,39 @@ int ORB_pattern[256 * 4] = {
 };
 //计算描述子
 void ComputeORB(const cv::Mat &img, vector<cv::KeyPoint> &keypoints, vector<DescriptorType> &descriptors){
-    
+    const int half_patch = 8;   //patch的一半长度
+    const int half_edge = 16;   //扩充的边界一半长度
+    int out_points = 0;
+
+    for(auto &kp : keypoints){
+        if(kp.pt.x < half_edge||kp.pt.y < half_edge|| kp.pt.x > img.cols - half_edge || kp.pt.y > img.rows - half_edge){
+            out_points++;
+            descriptors.push_back({});
+            continue;
+        }
+
+        float m10 = 0.0, m01 = 0.0;
+        for (int dx = -half_patch; dx < half_patch; ++dx){
+            for (int dy = -half_patch; dy < half_patch; ++dy){
+                uchar pixel = img.at<uchar>(kp.pt.y + dy, kp.pt.x + dx);
+                m10 += pixel * dx;
+                m01 += pixel * dy;
+            }
+        }
+
+        //计算旋转角度
+        float hypotenuse = sqrt(m01 * m01 + m10 * m10) + 1e-18;
+        float cos_theta = m10 / hypotenuse;
+        float sin_theta = m01 / hypotenuse;
+
+        //计算patch窗口下随机点的方向
+        //brief描述子是　32 * 8　=　256位　每比较８位需要查询16个随机像素点
+        DescriptorType desc(8, 0);//定义一个中间变量并初始化为0
+        for (int i = 0; i < 8; i++){
+            uint32_t d = 0;
+            for (int k = 0; k < 32; k++){
+                int 
+            }
+        }
+    }
 }
