@@ -1,7 +1,7 @@
 /*
  * @Author: Jack
  * @Date: 2022-07-20 01:14:18
- * @LastEditTime: 2022-07-21 22:08:13
+ * @LastEditTime: 2022-07-22 00:56:02
  * @LastEditors: your name
  * @Description: koro1FileHeader
  * @FilePath: /ch7/orb_mine.cpp
@@ -369,7 +369,13 @@ void ComputeORB(const cv::Mat &img, vector<cv::KeyPoint> &keypoints, vector<Desc
         for (int i = 0; i < 8; i++){
             uint32_t d = 0;
             for (int k = 0; k < 32; k++){
-                int 
+              int idx_pq = i * 32 + k;
+              //8位，每比较一位
+              cv::Point2f p(ORB_pattern[idx_pq * 4], ORB_pattern[idx_pq * 4 + 1]);
+              cv::Point2f q(ORB_pattern[idx_pq * 4 + 2], ORB_pattern[idx_pq * 4 + 3]);
+              //
+              
+              if(img.at<uchar>())
             }
         }
     }
