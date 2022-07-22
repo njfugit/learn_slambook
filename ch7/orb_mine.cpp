@@ -1,7 +1,7 @@
 /*
  * @Author: Jack
  * @Date: 2022-07-20 01:14:18
- * @LastEditTime: 2022-07-22 00:56:02
+ * @LastEditTime: 2022-07-22 15:28:30
  * @LastEditors: your name
  * @Description: koro1FileHeader
  * @FilePath: /ch7/orb_mine.cpp
@@ -29,7 +29,6 @@ typedef vector<uint32_t> DescriptorType;
 void ComputeORB(const cv::Mat &img, vector<cv::KeyPoint> &keypoints, vector<DescriptorType> &descriptors);
 
 //两组描述子暴力匹配
-
 void BfMatch(const vector<DescriptorType> descriptor1, const vector<DescriptorType> descriptor2, vector<cv::DMatch> &matches);
 
 
@@ -348,7 +347,6 @@ void ComputeORB(const cv::Mat &img, vector<cv::KeyPoint> &keypoints, vector<Desc
             descriptors.push_back({});
             continue;
         }
-
         float m10 = 0.0, m01 = 0.0;
         for (int dx = -half_patch; dx < half_patch; ++dx){
             for (int dy = -half_patch; dy < half_patch; ++dy){
@@ -357,7 +355,6 @@ void ComputeORB(const cv::Mat &img, vector<cv::KeyPoint> &keypoints, vector<Desc
                 m01 += pixel * dy;
             }
         }
-
         //计算旋转角度
         float hypotenuse = sqrt(m01 * m01 + m10 * m10) + 1e-18;
         float cos_theta = m10 / hypotenuse;
@@ -373,10 +370,49 @@ void ComputeORB(const cv::Mat &img, vector<cv::KeyPoint> &keypoints, vector<Desc
               //8位，每比较一位
               cv::Point2f p(ORB_pattern[idx_pq * 4], ORB_pattern[idx_pq * 4 + 1]);
               cv::Point2f q(ORB_pattern[idx_pq * 4 + 2], ORB_pattern[idx_pq * 4 + 3]);
-              //
-              
-              if(img.at<uchar>())
+              //旋转过后的随机点坐标　
+              /*
+               (x',y')^T = Matrix |cos_theta, -sin_theta|  * (x, y)^T
+                                  |sin_theta, cos_theata|      
+              */
+             //计算整个图像中的偏移坐标, pattern中的随机点是在以关键点为中心的patch块中选取的
+              cv::Point2f pp = kp.pt + cv::Point2f(p.x * cos_theta - p.y * sin_theta, p.x * sin_theta + p.y * cos_theta);
+              cv::Point2f qq = kp.pt + cv::Point2f(q.x * cos_theta - q.y * sin_theta, q.x * sin_theta + q.y * cos_theta);
+              //如果ｐ＞ｑ可以设置为１
+              if(img.at<uchar>(pp.y, pp.x) > img.at<uchar>(qq.y, qq.x)){
+                d |= 1 << k; //相当于32位的部分累计加一起
+              }
             }
+            desc[i] = d;
+        }
+        descriptors.push_back(desc);
+    }
+    cout << "out_points/total: " << out_points << "/" << keypoints.size() << endl;
+    
+}
+
+//暴力匹配
+void BfMatch(const vector<DescriptorType> descriptor1, const vector<DescriptorType> descriptor2, vector<cv::DMatch> &matches){
+    const int dis_max = 40;
+    for (size_t i = 0; i < descriptor1.size(); ++i){
+        if(descriptor1[i].empty()) continue;
+        //定义一个局部变量存储每对匹配的描述子，根据distance来筛选
+        cv::DMatch m{i, 0, 256};//第一个参数query是要匹配的描述子，第二个参数train是被匹配的描述子，第三个表示距离
+        for (size_t j = 0; j < descriptor2.size(); ++j){
+           if(descriptor2[j].empty()) continue;
+           int distance = 0;
+           for (int k = 0; k < 8; k++){
+                ////按位异或，取两个描述子不同的位数
+                //_mm_popcnt_u32函数取二进制数中１的个数
+                distance +=_mm_popcnt_u32(descriptor1[i][k] ^ descriptor2[j][k]);
+           }
+           if(distance < dis_max && distance < m.distance){
+               m.distance = distance;
+               m.trainIdx = j;
+           }
+        }
+        if(m.distance < dis_max){
+            matches.push_back(m);
         }
     }
 }

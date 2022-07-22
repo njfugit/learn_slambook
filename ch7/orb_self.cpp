@@ -381,7 +381,6 @@ void ComputeORB(const cv::Mat &img, vector<cv::KeyPoint> &keypoints, vector<Desc
         /**
          * @brief  (x',y')^T = Matrix |cos_theta, -sin_theta|  * (x, y)^T
          *                            |sin_theta, cos_theata|
-         * 
          */
         //之所以此处需要+ kp.pt的原因是上述随机点对选择是以关键点为中心选择的
         cv::Point2f pp = cv::Point2f(cos_theta * p.x - sin_theta * p.y, sin_theta * p.x + cos_theta * p.y)
