@@ -30,7 +30,7 @@
 *.exe
 *.out
 *.app
-ch7/CMakeLists*
+
 *cmake-build-*
 *.idea
 **build**

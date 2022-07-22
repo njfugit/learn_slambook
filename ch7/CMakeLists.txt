@@ -6,7 +6,7 @@ add_definitions("-DENABLE_SSE")
 set(CMAKE_CXX_FLAGS "-std=c++14 -O2 ${SSE_FLAGS} -msse4")
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-find_package(OpenCV 3 REQUIRED)
+find_package(OpenCV  REQUIRED)
 find_package(G2O REQUIRED)
 find_package(Sophus REQUIRED)
 find_package(fmt)
@@ -33,8 +33,8 @@ target_link_libraries(orb_mine ${OpenCV_LIBS})
 add_executable(pose_estimation_2d2d pose_estimation_2d2d.cpp)
 target_link_libraries(pose_estimation_2d2d ${OpenCV_LIBS})
 
-add_executable(pose_2d2d 2Dto2D.cpp)
-target_link_libraries(pose_2d2d ${OpenCV_LIBS})
+# add_executable(pose_2d2d 2Dto2D.cpp)
+# target_link_libraries(pose_2d2d ${OpenCV_LIBS})
 
 # # add_executable( triangulation triangulation.cpp extra.cpp) # use this if in opencv2
 add_executable(triangulation triangulation.cpp)
