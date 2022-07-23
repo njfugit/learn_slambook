@@ -1,7 +1,7 @@
 /*
  * @Author: Jack
  * @Date: 2022-07-23 14:51:22
- * @LastEditTime: 2022-07-24 01:23:45
+ * @LastEditTime: 2022-07-24 01:26:47
  * @LastEditors: your name
  * @Description: koro1FileHeader
  * @FilePath: /ch7/triangulation_self.cpp
@@ -99,7 +99,7 @@ void feature_match(const cv::Mat &img1, const cv::Mat &img2, vector<cv::KeyPoint
     cout << "max_diatance" << max_diatance << endl;
 
     for (int i = 0; i < descriptors1.rows; ++i){
-        if(match[i].distance <= max(2*min_distance, 30)){
+        if(match[i].distance <= max(2  * min_distance, 30.0)){
             matches.push_back(match[i]);
         }
     }
