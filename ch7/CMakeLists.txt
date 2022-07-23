@@ -8,13 +8,14 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 find_package(OpenCV  REQUIRED)
 find_package(G2O REQUIRED)
+find_package(Eigen3 REQUIRED)
 find_package(Sophus REQUIRED)
 find_package(fmt)
 include_directories(
         ${OpenCV_INCLUDE_DIRS}
         ${G2O_INCLUDE_DIRS}
         ${Sophus_INCLUDE_DIRS}
-        "/usr/include/eigen3/"
+        ${Eigen3_INCLUDE_DIRS}
 )
 
 add_executable(orb_cv orb_cv.cpp)
@@ -33,19 +34,33 @@ target_link_libraries(orb_mine ${OpenCV_LIBS})
 add_executable(pose_estimation_2d2d pose_estimation_2d2d.cpp)
 target_link_libraries(pose_estimation_2d2d ${OpenCV_LIBS})
 
-# add_executable(pose_2d2d 2Dto2D.cpp)
-# target_link_libraries(pose_2d2d ${OpenCV_LIBS})
+add_executable(pose_2d2d 2Dto2D.cpp)
+target_link_libraries(pose_2d2d ${OpenCV_LIBS})
 
 # # add_executable( triangulation triangulation.cpp extra.cpp) # use this if in opencv2
 add_executable(triangulation triangulation.cpp)
 target_link_libraries(triangulation ${OpenCV_LIBS})
+
+add_executable(t_self triangulation_self.cpp)
+target_link_libraries(t_self ${OpenCV_LIBS})
 
 add_executable(pose_estimation_3d2d pose_estimation_3d2d.cpp)
 target_link_libraries(pose_estimation_3d2d
         g2o_core g2o_stuff
         ${OpenCV_LIBS} fmt::fmt)
 
+add_executable(pose_3d2d pose_3d2d.cpp)
+target_link_libraries(pose_3d2d
+        g2o_core g2o_stuff
+        ${OpenCV_LIBS} fmt::fmt)
+
+
 add_executable(pose_estimation_3d3d pose_estimation_3d3d.cpp)
+target_link_libraries(pose_estimation_3d3d
+        g2o_core g2o_stuff
+        ${OpenCV_LIBS} fmt::fmt)
+
+add_executable(pose_3d3d pose_3d3d.cpp)
 target_link_libraries(pose_estimation_3d3d
         g2o_core g2o_stuff
         ${OpenCV_LIBS} fmt::fmt)
