@@ -1,7 +1,7 @@
 /*
  * @Author: Jack
  * @Date: 2022-07-20 01:14:18
- * @LastEditTime: 2022-07-22 15:28:30
+ * @LastEditTime: 2022-07-24 00:47:19
  * @LastEditors: your name
  * @Description: koro1FileHeader
  * @FilePath: /ch7/orb_mine.cpp
@@ -397,7 +397,7 @@ void BfMatch(const vector<DescriptorType> descriptor1, const vector<DescriptorTy
     for (size_t i = 0; i < descriptor1.size(); ++i){
         if(descriptor1[i].empty()) continue;
         //定义一个局部变量存储每对匹配的描述子，根据distance来筛选
-        cv::DMatch m{i, 0, 256};//第一个参数query是要匹配的描述子，第二个参数train是被匹配的描述子，第三个表示距离
+        cv::DMatch m(i, 0, 256);//第一个参数query是要匹配的描述子，第二个参数train是被匹配的描述子，第三个表示距离
         for (size_t j = 0; j < descriptor2.size(); ++j){
            if(descriptor2[j].empty()) continue;
            int distance = 0;

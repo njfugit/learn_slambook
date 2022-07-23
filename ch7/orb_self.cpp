@@ -10,8 +10,8 @@
 using namespace std;
 
 // global variables
-string first_file = "./1.png";
-string second_file = "./2.png";
+string img_path1 = "/home/nj/DATA/learn_slambook/ch7/1.png";
+string img_path2 = "/home/nj/DATA/learn_slambook/ch7/2.png";
 
 // 32 bit unsigned int, will have 8, 8x32=256
 typedef vector<uint32_t> DescType; // Descriptor type
@@ -38,8 +38,9 @@ void BfMatch(const vector<DescType> &desc1, const vector<DescType> &desc2, vecto
 int main(int argc, char **argv) {
 
   // load image
-  cv::Mat first_image = cv::imread(first_file, 0);
-  cv::Mat second_image = cv::imread(second_file, 0);
+  cv::Mat first_image = cv::imread(img_path1, 0);
+  cv::Mat second_image = cv::imread(img_path2, 0);
+
   assert(first_image.data != nullptr && second_image.data != nullptr);
 
   // detect FAST keypoints1 using threshold=40
@@ -405,7 +406,7 @@ void BfMatch(const vector<DescType> &desc1, const vector<DescType> &desc2, vecto
 
   for (size_t i1 = 0; i1 < desc1.size(); ++i1) {
     if (desc1[i1].empty()) continue;
-    cv::DMatch m{i1, 0, 256};
+    cv::DMatch m(i1, 0, 256);
     for (size_t i2 = 0; i2 < desc2.size(); ++i2) {
       if (desc2[i2].empty()) continue;
       int distance = 0;
