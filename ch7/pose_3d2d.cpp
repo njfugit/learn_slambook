@@ -1,7 +1,7 @@
 /*
  * @Author: Jack
  * @Date: 2022-07-23 13:13:46
- * @LastEditTime: 2022-07-24 22:19:37
+ * @LastEditTime: 2022-07-25 01:14:56
  * @LastEditors: your name
  * @Description: koro1FileHeader
  * @FilePath: /ch7/pose_3d2d.cpp
@@ -30,16 +30,16 @@ cv::Point2d pixel2cam(const cv::Point2d &p, const cv::Mat &K);
 //BA by g2o
 typedef vector<Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d>> Vec2d;
 typedef vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> Vec3d;
-void BAG2O(const Vec3d &points_3d, const Vec2d &points_2d, const cv::Mat &K, Sophus::SE3d &poses);
+void BAG2O(const Vec3d &points_3d, const Vec2d &points_2d, const cv::Mat &K, Sophus::SE3d &pose);
 //BA by Gauss-Newton
-void BAGaussNewton(const Vec3d &points_3d, const Vec2d &points_2d, const cv::Mat &K, Sophus::SE3d &poses);
+void BAGaussNewton(const Vec3d &points_3d, const Vec2d &points_2d, const cv::Mat &K, Sophus::SE3d &pose);
 
 int main(int argc, char** argv){
     
-    string img_path1 = "/home/nijun/Documents/learn_slambook/ch7/1.png"; 
-    string img_path2 = "/home/nijun/Documents/learn_slambook/ch7/2.png";
-    string depth_path1 = "/home/nijun/Documents/learn_slambook/ch7/1_depth.png";
-    string depth_path2 = "/home/nijun/Documents/learn_slambook/ch7/2_depth.png";
+    string img_path1 = "/home/nj/DATA/learn_slambook/ch7/1.png"; 
+    string img_path2 = "/home/nj/DATA/learn_slambook/ch7/2.png";
+    string depth_path1 = "/home/nj/DATA/learn_slambook/ch7/1_depth.png";
+    string depth_path2 = "/home/nj/DATA/learn_slambook/ch7/2_depth.png";
     cv::Mat img1 = cv::imread(img_path1, 1);
     cv::Mat img2 = cv::imread(img_path2, 1);
     cv::Mat depth1 = cv::imread(depth_path1, -1);
@@ -119,4 +119,66 @@ void feature_match(const cv::Mat &img1, const cv::Mat &img2, vector<cv::KeyPoint
     cv::Mat descriptors1, descriptors2;
     descriptor->compute(img1, keypoints1, descriptors1);
     descriptor->compute(img2, keypoints2, descriptors2);
+
+    vector<cv::DMatch> match;
+    matcher->match(descriptors1, descriptors2, match);
+
+    double min_distance = 10000, max_distance = 0;
+
+    for (int i = 0; i < descriptors1.rows; i++){
+        double dist = match[i].distance;
+        if(dist<min_distance)
+            min_distance = dist;
+        if(dist>max_distance)
+            max_distance = dist;
+        
+    }
+    cout << "min_distance" << min_distance << endl;
+    cout << "max_distance" << max_distance << endl;
+
+    for (int i = 0; i < descriptors1.rows;++i){
+        if(match[i].distance<=max(2*min_distance,30.0)){
+            matches.push_back(match[i]);
+        }
+    }
+}
+cv::Point2d pixel2cam(const cv::Point2d &p, const cv::Mat &K){
+    double px = (p.x - K.at<double>(0, 2)) / K.at<double>(0, 0);
+    double py = (p.y - K.at<double>(1, 2)) / K.at<double>(1, 1);
+
+    return cv::Point2d(px, py);
+}
+
+//BA by Gauss-Newton
+void BAGaussNewton(const Vec3d &points_3d, const Vec2d &points_2d, const cv::Mat &K, Sophus::SE3d &pose){
+    typedef Eigen::Matrix<double, 6, 1> Vector6d;
+    const int iterations = 10;
+    double cost = 0, lastcost = 0;
+    double fx = K.at<double>(0, 0);
+    double fy = K.at<double>(1, 1);
+    double cx = K.at<double>(0, 2);
+    double cy = K.at<double>(1, 2);
+
+    for (int iter = 0; iter < iterations; ++iter){
+        Eigen::Matrix<double, 6, 6> H = Eigen::Matrix<double, 6, 6>::Zero();
+        Vector6d b = Vector6d::Zero();
+
+        cost = 0;
+        for (int i = 0; i < points_3d.size(); i++){
+            Eigen::Vector3d pc = pose * points_3d[i];
+            double inv_z = 1.0 / pc[2];
+            double inv_z2 = inv_z * inv_z;
+            Eigen::Vector2d proj(fx * pc[0] * inv_z + cx, fy * pc[1] * inv_z + cy);
+
+            Eigen::Vector2d error = points_2d[i] - proj;
+
+            cost += error.squaredNorm();//L2范数
+            //定义雅可比矩阵
+            Eigen::Matrix<double, 2, 6> J;
+            //输入J表达式
+
+            H += J.transpose() * J;
+            b += -J.transpose() * error;
+        }
+    }
 }
