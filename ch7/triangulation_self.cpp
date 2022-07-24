@@ -1,7 +1,7 @@
 /*
  * @Author: Jack
  * @Date: 2022-07-23 14:51:22
- * @LastEditTime: 2022-07-24 01:26:47
+ * @LastEditTime: 2022-07-24 16:02:36
  * @LastEditors: your name
  * @Description: koro1FileHeader
  * @FilePath: /ch7/triangulation_self.cpp
@@ -134,7 +134,31 @@ void triangulation(const vector<cv::KeyPoint> &kp1, const vector<cv::KeyPoint> &
                  0, 1, 0, 0,
                  0, 0, 1, 0);
     cv::Mat T2 = (cv::Mat_<double>(3, 4) << 
-                 1, 0, 0, 0,
-                 0, 1, 0, 0,
-                 0, 0, 1, 0);
+                 R.at<double>(0,0), R.at<double>(0,1), R.at<double>(0,2), t.at<double>(0,0),
+                 R.at<double>(1,0), R.at<double>(1,1), R.at<double>(1,2), t.at<double>(1,0),
+                 R.at<double>(2,0), R.at<double>(2,1), R.at<double>(2,2), t.at<double>(2,0));
+    
+    cv::Mat K = (cv::Mat_<double>(3, 3) << 520.9, 0, 325.1, 0, 521.0, 249.7, 0, 0, 1);
+    vector<cv::Point2f> pts1, pts2;
+    for(cv::DMatch &m : matches){
+        //像素坐标转成相机坐标
+        pts1.push_back(pixel2cam(kp1[m.queryIdx].pt, K));
+        pts2.push_back(pixel2cam(kp2[m.trainIdx].pt, K));
+    }
+    
+    cv::Mat points_4d; //齐次坐标
+    cv::triangulatePoints(T1, T2, pts1, pts2, points_4d);
+    //转换成非齐次坐标
+    for (int i = 0; i < points_4d.cols; ++i){
+        cv::Mat x = points_4d.col(i);
+        x /= x.at<float>(3, 0);//归一化
+        //转成非齐次
+        cv::Point3d p(x.at<float>(0, 0), x.at<float>(1, 0), x.at<float>(2, 0));
+        points.push_back(p);
+    }
+}
+cv::Point2f pixel2cam(const cv::Point2d &p, cv::Mat &K){
+    float px = (p.x - K.at<double>(0, 2)) / K.at<double>(0, 0);
+    float py = (p.y - K.at<double>(1, 2)) / K.at<double>(1, 1);
+    return cv::Point2f(px, py);
 }
