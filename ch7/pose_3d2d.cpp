@@ -1,7 +1,7 @@
 /*
  * @Author: Jack
  * @Date: 2022-07-23 13:13:46
- * @LastEditTime: 2022-07-25 01:14:56
+ * @LastEditTime: 2022-07-25 22:38:08
  * @LastEditors: your name
  * @Description: koro1FileHeader
  * @FilePath: /ch7/pose_3d2d.cpp
@@ -15,7 +15,7 @@
 #include<g2o/core/sparse_optimizer.h>
 #include<g2o/core/block_solver.h>
 #include<g2o/core/solver.h>
-#include<g2o/core/optimization_algorithm.h>
+#include <g2o/core/optimization_algorithm_gauss_newton.h>
 #include<g2o/solvers/dense/linear_solver_dense.h>
 #include<Eigen/Core>
 #include<sophus/se3.hpp>
@@ -176,9 +176,135 @@ void BAGaussNewton(const Vec3d &points_3d, const Vec2d &points_2d, const cv::Mat
             //定义雅可比矩阵
             Eigen::Matrix<double, 2, 6> J;
             //输入J表达式
-
+            J<<-fx * inv_z, 
+                0,
+                fx * pc[0] * inv_z2,
+                fx * pc[0] * pc[1] * inv_z2,
+                -fx - fx * pc[0] * pc[0] * inv_z2,
+                fx * pc[1] * inv_z,
+                0,
+                -fy * inv_z,
+                fy * pc[1] * inv_z2,
+                fy + fy * pc[1] * pc[1] * inv_z2,
+                -fy * pc[0] * pc[1] * inv_z2,
+                -fy * pc[0] * inv_z;
+                                                                                                                               
             H += J.transpose() * J;
             b += -J.transpose() * error;
         }
+
+        Vector6d dx;
+        dx = H.ldlt().solve(b);//求解
+        
+        if(isnan(dx[0])){
+            cout << "result is nan" << endl;
+            break;
+        }
+        
+        if(iter > 0 && cost >= lastcost){
+            //cost增加，说明更新的值不是很好
+            cout << "cost: " << cost << ", last cost: " << lastcost << endl;
+            break;
+        }
+        //根据计算的dx更新位姿
+        pose = Sophus::SE3d::exp(dx) * pose;//左乘（李代数）增量
+        lastcost = cost;
+        cout << "iteration " << iter << " cost=" << setprecision(12) << cost << endl;
+
+        if(dx.norm()<1e-6){     //对于Vector，norm返回的是向量的二范数
+            break;
+        }
     }
+    cout << "pose by g-n: \n"
+         << pose.matrix() << endl;
+    
+}
+
+//通过G2O进行优化
+//定义顶点
+class VertexPose : public g2o::BaseVertex<6, Sophus::SE3d> {
+    public:
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    
+    virtual void setToOriginImpl() override{
+        //顶点设置  设置优化变量的原始值
+        _estimate = Sophus::SE3d();
+    }
+    //左乘 SE3  更新顶点的值
+    virtual void oplusImpl(const double *update) override{
+        Eigen::Matrix<double, 6, 1> update_eigen;
+        update_eigen << update[0], update[1], update[2], update[3], update[4], update[5];
+        _estimate = Sophus::SE3d::exp(update_eigen) * _estimate;
+    }
+    virtual bool read(istream &in) override{}
+    virtual bool write(ostream &out) const override{}
+};
+
+class Edgeprojection : public g2o::BaseUnaryEdge<2,Eigen::Vector2d, VertexPose>{
+    public:
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+        Edgeprojection(const Eigen::Vector3d &pos, const Eigen::Matrix3d &K) : _pos(pos), _k(K){}
+
+        //需要覆写的两个函数
+        virtual void computeError() override{
+            //_vertices[]存储顶点信息　如果是二元边　_vertices[]大小为2
+            const VertexPose *v = static_cast<VertexPose *>(_vertices[0]);
+            Sophus::SE3d T = v->estimate(); //取出顶点里面的值
+            Eigen::Vector3d pos_pixel = _k*(T*_pos);
+            pos_pixel /= pos_pixel[2];
+            _error = _measurement - pos_pixel.head<2>();//取pos_pixel前两个元素（固定向量版本）
+        }
+
+        //定义雅可比矩阵
+        virtual void linearizeOplus() override{
+            const VertexPose *v = static_cast<VertexPose *>(_vertices[0]);
+            Sophus::SE3d T = v->estimate();
+            Eigen::Vector3d pos_cam = T * _pos;
+            double fx = _k(0, 0);
+            double fy = _k(1, 1);
+            double cx = _k(0, 2);
+            double cy = _k(1, 2);
+            double X = pos_cam[0];
+            double Y = pos_cam[1];
+            double Z = pos_cam[2];
+            double inv_z = 1.0 / Z;
+            double inv_z2 = inv_z * inv_z;
+            _jacobianOplusXi << 
+                -fx * inv_z,
+                0,
+                fx * X * inv_z2,
+                fx * X * Y * inv_z2,
+                -fx - fx * X * X * inv_z2,
+                fx * Y * inv_z,
+                0,
+                -fy * inv_z,
+                fy * Y * inv_z2,
+                fy + fy * Y * Y * inv_z2,
+                -fy * X * Y * inv_z2,
+                -fy * X * inv_z;
+        }
+        virtual bool read(istream &in) override{}
+        virtual bool write(ostream &out) const override{}
+    private:
+        Eigen::Vector3d _pos;
+        Eigen::Matrix3d _k;
+};
+void BAG2O(const Vec3d &points_3d, const Vec2d &points_2d, const cv::Mat &K, Sophus::SE3d &pose){
+
+    //构建图优化
+    typedef g2o::BlockSolver<g2o::BlockSolverTraits<6, 3>> BlockSolverType; //位姿是６　路标点为３
+    typedef g2o::LinearSolverDense<BlockSolverType::PoseMatrixType> LinearSolverType;
+    auto linearsolver = g2o::make_unique<LinearSolverType>();
+    auto blocksolver = g2o::make_unique<BlockSolverType>(std::move(linearsolver));
+    auto solver = new g2o::OptimizationAlgorithmGaussNewton(std::move(blocksolver));
+
+    g2o::SparseOptimizer optimizer;
+    optimizer.setAlgorithm(solver);
+    optimizer.setVerbose(true);
+
+    //添加vertex
+    VertexPose *vertex_pose = new VertexPose();
+    vertex_pose->setId(0);
+    vertex_pose->setEstimate(Sophus::SE3d());
+    optimizer.addVertex(vertex_pose);
 }
