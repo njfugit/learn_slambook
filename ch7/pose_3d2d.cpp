@@ -1,7 +1,11 @@
 /*
  * @Author: Jack
  * @Date: 2022-07-23 13:13:46
- * @LastEditTime: 2022-07-26 00:27:46
+<<<<<<< HEAD
+ * @LastEditTime: 2022-07-26 23:31:24
+=======
+ * @LastEditTime: 2022-07-26 16:49:31
+>>>>>>> 13d5f51a1d4afe5397ca110f063486b0100ede97
  * @LastEditors: your name
  * @Description: koro1FileHeader
  * @FilePath: /ch7/pose_3d2d.cpp
@@ -269,19 +273,23 @@ class Edgeprojection : public g2o::BaseUnaryEdge<2,Eigen::Vector2d, VertexPose>{
             double Z = pos_cam[2];
             double inv_z = 1.0 / Z;
             double inv_z2 = inv_z * inv_z;
+            //在G2O中　旋转在前，平移在后　　　而在Sophus中　平移在前　旋转在后
+            //变换后点对极小扰动量的导数为[I -P'^]  变换顺序后[-P'^ I]
+            //数上推导的雅可比矩阵前三列和后三列　应该将交换顺序
             _jacobianOplusXi << 
-                -fx * inv_z,
-                0,
-                fx * X * inv_z2,
                 fx * X * Y * inv_z2,
                 -fx - fx * X * X * inv_z2,
                 fx * Y * inv_z,
+                -fx * inv_z,
                 0,
-                -fy * inv_z,
-                fy * Y * inv_z2,
+                fx * X * inv_z2,
+
                 fy + fy * Y * Y * inv_z2,
                 -fy * X * Y * inv_z2,
-                -fy * X * inv_z;
+                -fy * X * inv_z,
+                0,
+                -fy * inv_z,
+                fy * Y * inv_z2;
         }
         virtual bool read(istream &in) override{}
         virtual bool write(ostream &out) const override{}
@@ -317,4 +325,35 @@ void BAG2O(const Vec3d &points_3d, const Vec2d &points_2d, const cv::Mat &K, Sop
     //添加边的信息
 
     
+    //K
+    Eigen::Matrix3d K_eigen;
+    K_eigen<<
+        K.at<double>(0,0),K.at<double>(0,1),K.at<double>(0,2),
+        K.at<double>(1,0),K.at<double>(1,1),K.at<double>(1,2),
+        K.at<double>(2,0),K.at<double>(2,1),K.at<double>(2,2);
+    
+    //添加edge
+    int index = 1;
+    for (size_t i = 0; i < points_2d.size(); ++i){
+        auto p2d = points_2d[i];
+        auto p3d = points_3d[i];
+        Edgeprojection *edge = new Edgeprojection(p3d, K_eigen);
+        edge->setId(index);
+        edge->setVertex(0, vertex_pose);
+        edge->setMeasurement(p2d);
+        edge->setInformation(Eigen::Matrix2d::Identity());
+        optimizer.addEdge(edge);
+        index++;
+    }
+
+    chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
+    optimizer.setVerbose(true);
+    optimizer.initializeOptimization();
+    optimizer.optimize(10);
+    chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
+    chrono::duration<double> time_used = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
+
+    cout << "optimization cost time" << time_used.count() << "seconds" << endl;
+    cout << "pose estimate by g2o" << vertex_pose->estimate().matrix() << endl;//输出位姿Ｔ　４ｘ４
+    pose = vertex_pose->estimate();
 }
