@@ -1,7 +1,7 @@
 /*
  * @Author: Jack
  * @Date: 2022-07-23 13:14:24
- * @LastEditTime: 2022-07-26 21:53:38
+ * @LastEditTime: 2022-07-27 01:00:33
  * @LastEditors: your name
  * @Description: koro1FileHeader
  * @FilePath: /ch7/pose_3d3d.cpp
@@ -28,7 +28,7 @@ using namespace std;
 void feature_match(const cv::Mat &img1, const cv::Mat &img2, vector<cv::KeyPoint> &kp1, vector<cv::KeyPoint> &kp2, vector<cv::DMatch> &matches);
 void pose_3d3d(const vector<cv::Point3f> &pts1, const vector<cv::Point3f> &pts2, cv::Mat &R, cv::Mat &t);
 cv::Point2d pixel2cam(const vector<cv::Point2d> &p, cv::Mat &K);
-void BAG2O(const vector<cv::Point3d> &p_3d1, const vector<cv::Point3d> &p_3d2, cv::Mat &R, cv::Mat &t);
+void BAG2O(const vector<cv::Point3f> &p_3d1, const vector<cv::Point3f> &p_3d2, cv::Mat &R, cv::Mat &t);
 
 int main(int argc, char ** argv){
     string img_path1 = "/home/nj/DATA/learn_slambook/ch7/1.png"; 
@@ -48,9 +48,9 @@ int main(int argc, char ** argv){
     //建立3D点
     cv::Mat K = (cv::Mat_<double>(3, 3) << 520.9, 0, 325.1, 0, 521.0, 249.7, 0, 0, 1);
     vector<cv::Point3f> pts1, pts2;
-    for(cv::DMatch &m : matches){
-        ushort d1 = depth1.ptr<ushort>(keypoints1[m.queryIdx].pt.y)[keypoints1[m.queryIdx].pt.x];
-        ushort d2 = depth2.ptr<ushort>(keypoints2[m.trainIdx].pt.y)[keypoints2[m.trainIdx].pt.x];
+    for(cv::DMatch m : matches){
+        ushort d1 = depth1.ptr<ushort>(int(keypoints1[m.queryIdx].pt.y))[int(keypoints1[m.queryIdx].pt.x)];
+        ushort d2 = depth2.ptr<ushort>(int(keypoints2[m.trainIdx].pt.y))[int(keypoints2[m.trainIdx].pt.x)];
         if(d1 == 0 || d2 == 0)
             continue;
         cv::Point2d p1 = pixel2cam(keypoints1[m.queryIdx].pt, K);
@@ -117,4 +117,36 @@ void feature_match(const cv::Mat &img1, const cv::Mat &img2, vector<cv::KeyPoint
             matches.push_back(match[i]);
         }
     }
+}
+cv::Point2d pixel2cam(const cv::Point2d &p, const cv::Mat &K){
+    double px = (p.x - K.at<double>(0, 2)) / K.at<double>(0, 0);
+    double py = (p.y - K.at<double>(1, 2)) / K.at<double>(1, 1);
+
+    return cv::Point2d(px, py);
+}
+void pose_3d3d(const vector<cv::Point3f> &pts1, const vector<cv::Point3f> &pts2, cv::Mat &R, cv::Mat &t){
+    cv::Point3f p1, p2;//质点
+    int N = pts1.size();
+    for (int i = 0; i < N; i++){
+        p1 += pts1[i];
+        p2 += pts2[i];
+    }
+    p1 = cv::Point3f(cv::Vec3f(p1) / N);
+    p2 = cv::Point3f(cv::Vec3f(p2) / N);
+
+    vector<cv::Point3f> q1(N), q2(N);
+    //去质心
+    for (int i = 0; i < N; i++){
+        q1[i] = pts1[i] - p1;
+        q2[i] = pts2[i] - p2;
+    }
+
+    Eigen::Matrix3d W = Eigen::Matrix3d::Zero();
+    for (int i = 0; i < N; i++){
+        //q1*q2^T
+        W += Eigen::Vector3d(q1[i].x, q1[i].y, q1[i].z) * Eigen::Vector3d(q2[i].x, q2[i].y, q2[i].z).transpose();
+    }
+
+    //将W进行SVD分解
+    
 }
