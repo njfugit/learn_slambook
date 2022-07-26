@@ -1,7 +1,7 @@
 /*
  * @Author: Jack
  * @Date: 2022-07-23 13:13:46
- * @LastEditTime: 2022-07-25 22:38:08
+ * @LastEditTime: 2022-07-26 00:27:46
  * @LastEditors: your name
  * @Description: koro1FileHeader
  * @FilePath: /ch7/pose_3d2d.cpp
@@ -304,7 +304,17 @@ void BAG2O(const Vec3d &points_3d, const Vec2d &points_2d, const cv::Mat &K, Sop
 
     //添加vertex
     VertexPose *vertex_pose = new VertexPose();
-    vertex_pose->setId(0);
+    vertex_pose->setId(0);//边的一端
     vertex_pose->setEstimate(Sophus::SE3d());
     optimizer.addVertex(vertex_pose);
+
+    Eigen::Matrix3d K_eigen;
+    K_eigen << 
+        K.at<double>(0, 0), K.at<double>(0, 1), K.at<double>(0, 2),
+        K.at<double>(1, 0), K.at<double>(1, 1), K.at<double>(1, 2),
+        K.at<double>(2, 0), K.at<double>(2, 1), K.at<double>(2, 2);
+
+    //添加边的信息
+
+    
 }
