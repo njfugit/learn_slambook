@@ -1,7 +1,7 @@
 /*
  * @Author: Jack
  * @Date: 2022-07-23 13:14:24
- * @LastEditTime: 2022-07-27 01:00:33
+ * @LastEditTime: 2022-07-27 16:22:57
  * @LastEditors: your name
  * @Description: koro1FileHeader
  * @FilePath: /ch7/pose_3d3d.cpp
@@ -143,10 +143,129 @@ void pose_3d3d(const vector<cv::Point3f> &pts1, const vector<cv::Point3f> &pts2,
 
     Eigen::Matrix3d W = Eigen::Matrix3d::Zero();
     for (int i = 0; i < N; i++){
-        //q1*q2^T
+        //W = q1*q2^T
         W += Eigen::Vector3d(q1[i].x, q1[i].y, q1[i].z) * Eigen::Vector3d(q2[i].x, q2[i].y, q2[i].z).transpose();
     }
+    //关于矩阵的迹和二次型的关系　x^T*A*x = tr(A*x*x^T)
+    //tr(RW)取最大值 
+    //将W进行SVD分解 W = U sigma V^T   max tr(R U sigma V^T) = max tr(sigma V^T R U)
 
-    //将W进行SVD分解
-    
+    Eigen::JacobiSVD<Eigen::Matrix3d> svd(W, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    Eigen::Matrix3d U = svd.matrixU();
+    Eigen::Matrix3d V = svd.matrixV();
+
+    cout << "U = " << U << endl;
+    cout << "V = " << V << endl;
+    //R = U * V^T(因为行列式的值可能是正负１，当行列式的值是负１时，取－Ｒ
+    Eigen::Matrix3d R_svd = U * (V.transpose());
+    if(R_svd.determinant() < 0){
+        R_svd = -R_svd;
+    }
+    //t= p1 - R*p2
+    Eigen::Vector3d t_svd = Eigen::Vector3d(p1.x, p1.y, p1.z) - R_svd * (Eigen::Vector3d(p2.x, p2.y, p2.z));
+
+    R = (cv::Mat_<double>(3, 3) << 
+         R_svd(0, 0), R_svd(0, 1), R_svd(0, 2),
+         R_svd(1, 0), R_svd(1, 1), R_svd(1, 2),
+         R_svd(2, 0), R_svd(2, 1), R_svd(2, 2));
+    t = (cv::Mat_<double>(3, 1) << 
+         t_svd(0, 0), t_svd(1, 0), t_svd(2, 0));
+
+    cout << "R = " << R << endl;
+    cout << "t = " << t << endl;
+}
+
+class VertexPose : public g2o::BaseVertex<6, Sophus::SE3d>{
+    public:
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+        //设置顶点初值
+        virtual void setToOriginImpl(){
+            _estimate = Sophus::SE3d();
+        }
+        //更新增量
+        virtual void oplusImpl(const double* update){
+            Eigen::Matrix<double, 6, 1> update_eigen;
+            update_eigen << update[0], update[1], update[2], update[3], update[4], update[5];
+            //左乘扰动变量，更新估计值
+            _estimate = Sophus::SE3d::exp(update_eigen) * _estimate;
+        }
+
+        virtual bool read(istream &in) override{}
+        virtual bool write(ostream &out) const override{}
+};
+
+class EdgeProj : public g2o::BaseUnaryEdge<3, Eigen::Vector3d, VertexPose>{
+    public:
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+        //根据误差优化公式适当写构造函数
+        EdgeProj(const Eigen::Vector3d & p) : _point(p){}
+
+        virtual void computeError() override{
+            const VertexPose *v = static_cast<VertexPose *>(_vertices[0]);
+            _error = _measurement - v->estimate() * _point;
+        }
+        virtual void linearizeOplus() override{
+            VertexPose *v = static_cast<VertexPose *>(_vertices[0]);
+            Sophus::SE3d T = v->estimate();
+            Eigen::Vector3d p_trans = T * _point;
+            //误差对于位姿的导数，雅可比矩阵3x6 [I -P'^],  此处旋转在前，平移在后,注意误差公式有个负号　为-[-P'^ I]＝[P'^ -I]
+            _jacobianOplusXi.block<3, 3>(0, 0) << Sophus::SE3d::hat(p_trans);
+            _jacobianOplusXi.block<3, 3>(0, 3) << -Eigen::Matrix3d::Identity();
+            
+        }
+        virtual bool read(istream &in) override {}
+        virtual bool write(ostream &out) const override{}
+
+    private:
+        Eigen::Vector3d _point;
+};
+
+void BAG2O(const vector<cv::Point3f> &p_3d1, const vector<cv::Point3f> &p_3d2, cv::Mat &R, cv::Mat &t){
+    //构建图优化　
+    //定义BlockSoloverType -> 定义LinearSolverType -> linearsolver -> blocksolver -> 选择优化策略
+    typedef g2o::BlockSolverX BlockSolverType;
+    typedef g2o::LinearSolverDense<BlockSolverType::PoseMatrixType> LinearSolverType;
+    auto linearsolver = g2o::make_unique<LinearSolverType>();
+    auto blocksolver = g2o::make_unique<BlockSolverType>(std::move(linearsolver));
+    auto solver = new g2o::OptimizationAlgorithmLevenberg(std::move(blocksolver));
+    g2o::SparseOptimizer optimizer;
+    optimizer.setAlgorithm(solver);
+    optimizer.setVerbose(true);
+
+    //添加点
+    VertexPose *v = new VertexPose();
+    v->setId(0);
+    v->setEstimate(Sophus::SE3d());
+    optimizer.addVertex(v);
+
+    //add edges
+    for (int i = 0; i < p_3d1.size(); i++){
+        EdgeProj *edge = new EdgeProj(Eigen::Vector3d(p_3d1[i].x, p_3d1[i].y, p_3d1[i].z));
+        edge->setId(i);
+        edge->setVertex(0, v);
+        edge->setMeasurement(Eigen::Vector3d(p_3d1[i].x, p_3d1[i].y, p_3d1[i].z));
+        edge->setInformation(Eigen::Matrix3d::Identity());//信息矩阵　方差矩阵的逆
+        optimizer.addEdge(edge);
+    }
+    chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
+    optimizer.initializeOptimization();
+    optimizer.optimize(10);
+    chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
+    chrono::duration<double> time_used = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
+
+    cout << "optimization cost " << time_used.count() << "seconds" << endl;
+
+    cout << "T = \n"
+         << v->estimate().matrix() << endl;//得到4x4的旋转矩阵
+    //将格式转成cv::Mat
+    Eigen::Matrix3d R_ba = v->estimate().rotationMatrix();
+    Eigen::Vector3d t_ba = v->estimate().translation();
+
+    R = (cv::Mat_<double>(3, 3) << 
+         R_ba(0, 0), R_ba(0, 1), R_ba(0, 2),
+         R_ba(1, 0), R_ba(1, 1), R_ba(1, 2),
+         R_ba(2, 0), R_ba(2, 1), R_ba(2, 2));
+    t = (cv::Mat_<double>(3, 1) << 
+         t_ba(0, 0), t_ba(1,0), t_ba(2, 0));
+         
 }

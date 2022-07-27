@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
 
   chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
   Mat r, t;
-  solvePnP(pts_3d, pts_2d, K, Mat(), r, t, false); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
+  cv::solvePnP(pts_3d, pts_2d, K, Mat(), r, t, false); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
   Mat R;
   cv::Rodrigues(r, R); // r为旋转向量形式，用Rodrigues公式转换为矩阵
   chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
