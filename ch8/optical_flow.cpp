@@ -1,18 +1,18 @@
 //
 // Created by Xiang on 2017/12/19.
 //
-
-#include <opencv2/opencv.hpp>
-#include <string>
-#include <chrono>
-#include <Eigen/Core>
-#include <Eigen/Dense>
+#include<opencv2/imgproc/types_c.h>//opencv4 cvtColor CV_BGR2GRAY未声明的标识符
+#include<opencv2/opencv.hpp>
+#include<string>
+#include<chrono>
+#include<Eigen/Dense>
+#include<Eigen/Core>
 
 using namespace std;
 using namespace cv;
 
-string file_1 = "./LK1.png";  // first image
-string file_2 = "./LK2.png";  // second image
+string file_1 = "/home/nijun/Documents/learn_slambook/ch8/LK1.png";  // first image
+string file_2 = "/home/nijun/Documents/learn_slambook/ch8/LK2.png";  // second image
 
 /// Optical flow tracker and interface
 class OpticalFlowTracker {

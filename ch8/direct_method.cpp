@@ -2,7 +2,7 @@
 #include <sophus/se3.hpp>
 #include <boost/format.hpp>
 #include <pangolin/pangolin.h>
-
+#include<opencv2/imgproc/types_c.h>//opencv4 cvtColor CV_BGR2GRAY未声明的标识符
 using namespace std;
 
 typedef vector<Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d>> VecVector2d;
