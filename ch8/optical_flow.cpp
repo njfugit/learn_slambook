@@ -111,6 +111,7 @@ int main(int argc, char **argv) {
 
     // key points, using GFTT here.
     vector<KeyPoint> kp1;
+    //使用harris角点作为LK光流的跟踪输入点　角点定义为在x,y方向上均有较大梯度变化的小区域
     Ptr<GFTTDetector> detector = GFTTDetector::create(500, 0.01, 20); // maximum 500 keypoints
     detector->detect(img1, kp1);
 
