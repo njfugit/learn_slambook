@@ -1,7 +1,7 @@
 /*
  * @Author: Jack
  * @Date: 2022-07-27 23:45:36
- * @LastEditTime: 2022-07-28 20:08:53
+ * @LastEditTime: 2022-07-28 21:51:31
  * @LastEditors: your name
  * @FilePath: /ch8/o_flow.cpp
  * 可以输入预定的版权声明、个性签名、空行等
@@ -168,6 +168,8 @@ void OpticalFlowSingle(
     kp2.resize(kp1.size());
     success.resize(kp1.size());
     OpticalFlowTracker tracker(img1, img2, kp1, kp2, success, inverse, has_initial);
+    //并行调用pticalFlowTracker::calculateOpticalFlow 
+    cv::parallel_for_(cv::Range(0, kp1.size()), std::bind(&OpticalFlowTracker::calculateOpticalFlow, tracker, placeholders::_1));
 }
 
 void OpticalFlowMulti(
