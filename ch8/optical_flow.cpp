@@ -225,7 +225,7 @@ void OpticalFlowTracker::calculateOpticalFlow(const Range &range) {
             for (int x = -half_patch_size; x < half_patch_size; x++)
                 for (int y = -half_patch_size; y < half_patch_size; y++) {
                     double error = GetPixelValue(img1, kp.pt.x + x, kp.pt.y + y) -
-                                   GetPixelValue(img2, kp.pt.x + x + dx, kp.pt.y + y + dy);;  // Jacobian
+                                   GetPixelValue(img2, kp.pt.x + x + dx, kp.pt.y + y + dy); // Jacobian
                     if (inverse == false) {
                         J = -1.0 * Eigen::Vector2d(
                             0.5 * (GetPixelValue(img2, kp.pt.x + dx + x + 1, kp.pt.y + dy + y) -

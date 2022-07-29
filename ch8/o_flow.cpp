@@ -1,7 +1,7 @@
 /*
  * @Author: Jack
  * @Date: 2022-07-27 23:45:36
- * @LastEditTime: 2022-07-28 21:51:31
+ * @LastEditTime: 2022-07-29 22:26:17
  * @LastEditors: your name
  * @FilePath: /ch8/o_flow.cpp
  * 可以输入预定的版权声明、个性签名、空行等
@@ -145,8 +145,8 @@ int main(int argc, char **argv){
     cv::cvtColor(img2, img2_cv,cv::COLOR_GRAY2BGR);
     for (int i = 0; i < pt2.size(); i++){
         if(success_multi[i]){
-            cv::circle(img2_multi, pt2[i], 2, cv::Scalar(0, 250, 0), 2);
-            cv::line(img2_multi, pt1[i], pt2[i], cv::Scalar(0, 250, 0), 2);
+            cv::circle(img2_cv, pt2[i], 2, cv::Scalar(0, 250, 0), 2);
+            cv::line(img2_cv, pt1[i], pt2[i], cv::Scalar(0, 250, 0), 2);
         }
     }
 
@@ -170,6 +170,88 @@ void OpticalFlowSingle(
     OpticalFlowTracker tracker(img1, img2, kp1, kp2, success, inverse, has_initial);
     //并行调用pticalFlowTracker::calculateOpticalFlow 
     cv::parallel_for_(cv::Range(0, kp1.size()), std::bind(&OpticalFlowTracker::calculateOpticalFlow, tracker, placeholders::_1));
+}
+
+void OpticalFlowTracker::calculateOpticalFlow(const cv::Range &range){
+    int half_patch_size = 4;    //窗口大小
+    int iterations = 10;
+    //range 左闭右开 [0 ~ kp1.size())
+    for (size_t i = range.start; i < range.end; i++){
+        auto kp = kp1[i];
+        double dx = 0, dy = 0;  //dx dy需要被估计
+        if(has_initial){
+            dx = kp2[i].pt.x - kp.pt.x;
+            dy = kp2[i].pt.y - kp.pt.y;
+        }
+        double cost = 0, lastcost = 0;
+        bool succ = true;   //indicate if this point succeeded
+
+        //gauss-newton iterations
+        Eigen::Matrix2d H = Eigen::Matrix2d::Zero(); //像素坐标 误差为二维
+        Eigen::Vector2d b = Eigen::Vector2d::Zero();
+        Eiegn::Vector2d J; //jacobian
+        for (int iter = 0; iter < iterations; iter++){
+            if(inverse == false){
+                H = Eigen::Matrix2d::Zero();
+                b = Eigen::Vector2d::Zero();
+            }else {
+                //只重置b
+                b = Eigen::Vector2d::Zero();
+            }
+            cost = 0;
+            //计算雅可比和cost
+            for (int x = -half_patch_size; x < half_patch_size; x++){
+                for (int y = -half_patch_size; y < half_patch_size;y++){
+                    double error = GetPixelValue(img1, kp.pt.x + x, kp.pt.y + y) - GetPixelValue(img2, kp.pt.x + x + dx, kp.pt.y + y + dy);
+                    
+                    if(inverse == false){
+                        //正常的光流计算　对应的雅可比为第二个图像在x+dx,y+dy处的梯度
+                        J = -1.0 * Eigen::Vector2d(
+                                       0.5 * (GetPixelValue(img2, kp.pt.x + x + dx + 1, kp.pt.y + y + dy) -
+                                              GetPixelValue(img2, kp.pt.x + x + dx - 1, kp.pt.y + y + dy)),
+                                       0.5 * (GetPixelValue(img2, kp.pt.x + x + dx, kp.pt.y + y + dy + 1) -
+                                              GetPixelValue(img2, kp.pt.x + x + dx, kp.pt.y + y + dy - 1)));
+                    }else if(iter == 0){
+                        // 采用反向光流方法 　雅可比以第一张的梯度代替　J keeps same for all iterations
+                        J = -1.0 * Eigen::Vector2d(
+                                       0.5 * (GetPixelValue(img1, kp.pt.x + x + 1, kp.pt.y + y) -
+                                              GetPixelValue(img1, kp.pt.x + x - 1, kp.pt.y + y)),
+                                       0.5 * (GetPixelValue(img1, kp.pt.x + x, kp.pt.y + y + 1) -
+                                              GetPixelValue(img1, kp.pt.x + x, kp.pt.y + y - 1)));
+                    }
+
+                    b += -J * error;
+                    cost += error * error;
+                    if(inverse == false || iter == 0){
+                        H += J * J.transpose();
+                    }
+                }
+            }
+        
+            //求解更新量
+            Eigen::Vector2d update = H.ldlt().solve(b);
+            if (std::isnan(update[0])) {
+                // sometimes occurred when we have a black or white patch and H is irreversible
+                cout << "update is nan" << endl;
+                succ = false;
+                break;
+            }
+            if(iter > 0 && cost > lastcost){
+                break;
+            }
+            
+            //update dx dy
+            dx += update[0];
+            dy += update[1];
+            lastcost = cost;
+            succ = true;
+            if(update.norm() < 1e-2){
+                break;
+            }
+        }
+        success[i] = succ;
+        kp2[i].pt = kp.pt + cv::Point2f(dx, dy);
+    }
 }
 
 void OpticalFlowMulti(
