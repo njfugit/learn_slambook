@@ -1,7 +1,7 @@
 /*
  * @Author: Jack
  * @Date: 2022-07-27 23:45:36
- * @LastEditTime: 2022-07-30 01:16:38
+ * @LastEditTime: 2022-08-01 01:14:47
  * @LastEditors: your name
  * @FilePath: /ch8/o_flow.cpp
  * 可以输入预定的版权声明、个性签名、空行等
@@ -290,6 +290,26 @@ void OpticalFlowMulti(
     for(auto &kp : kp1){
         auto kp_top = kp;
         kp_top.pt *= scales[pyramids - 1];//相应图层坐标缩放
-        
+        kp1_pyr.push_back(kp_top);
+        kp2_pyr.push_back(kp_top);
     }
+
+    for (int level = pyramids - 1; level >= 0; level--){
+        success.clear();
+        t1 = chrono::steady_clock::now();
+        OpticalFlowSingle(pyr1[level], pyr2[level], kp1_pyr, kp2_pyr, success, inverse, true);
+        t2 = chrono::steady_clock::now();
+        time_used = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
+        cout << "track  pyr:" << level << "cost time:" << time_used.count() << "seconds" << endl;
+
+        if(level > 0){
+            for(auto &kp:kp1_pyr)
+                kp.pt /= pyramids_scale;
+            for(auto &kp:kp2_pyr)
+                kp.pt /= pyramids_scale;
+        }
+    }
+
+    for(auto &kp:kp2_pyr)
+        kp2.push_back(kp);
 }
