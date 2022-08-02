@@ -1,7 +1,11 @@
 /*
  * @Author: Jack
  * @Date: 2022-07-27 23:45:36
+<<<<<<< HEAD
  * @LastEditTime: 2022-08-02 20:58:28
+=======
+ * @LastEditTime: 2022-08-01 01:14:47
+>>>>>>> 7a0f66753985a70a31295ab0fd02c7578ef6ef3d
  * @LastEditors: your name
  * @FilePath: /ch8/o_flow.cpp
  * 可以输入预定的版权声明、个性签名、空行等
@@ -106,8 +110,8 @@ int main(int argc, char **argv){
     OpticalFlowMulti(img1, img2, kp1, kp2_multi, success_multi, true);//多层采用反向光流
     chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
     chrono::duration<double> time_used = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
-
     cout << "optical flow by gauss-newton" << time_used.count() << "seconds" << endl;
+    
     //利用opencv光流验证
     vector<cv::Point2f> pt1, pt2;
     for(auto &kp : kp1)
@@ -188,7 +192,7 @@ void OpticalFlowTracker::calculateOpticalFlow(const cv::Range &range){
         //gauss-newton iterations
         Eigen::Matrix2d H = Eigen::Matrix2d::Zero(); //像素坐标 误差为二维
         Eigen::Vector2d b = Eigen::Vector2d::Zero();
-        Eiegn::Vector2d J; //jacobian
+        Eigen::Vector2d J; //jacobian
         for (int iter = 0; iter < iterations; iter++){
             if(inverse == false){
                 H = Eigen::Matrix2d::Zero();
@@ -259,4 +263,56 @@ void OpticalFlowMulti(
     const vector<cv::KeyPoint> &kp1,
     vector<cv::KeyPoint> &kp2,
     vector<bool> &success,
-    bool inverse = false);
+    bool inverse = false){
+
+    int pyramids = 4;//金字塔层数
+    double pyramids_scale = 0.5;
+    double scales[] = {1.0, 0.5, 0.25, 0.125};//图像的缩放尺度1, 1/2, 1/4, 1/8
+
+    //创建金字塔
+    chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
+    vector<cv::Mat> pyr1, pyr2;//图像金字塔
+    for (int i = 0; i < pyramids; i++){
+        if(i == 0){
+            pyr1.push_back(img1);
+            pyr2.push_back(img2);
+        }else {
+            cv::Mat img1_pyr, img2_pyr;//定义新的一层图层
+            cv::resize(pyr1[i - 1], img1_pyr, cv::Size(pyr1[i - 1].cols * pyramids_scale, pyr1[i - 1].rows * pyramids_scale));
+            cv::resize(pyr2[i - 1], img2_pyr, cv::Size(pyr2[i - 1].cols * pyramids_scale, pyr2[i - 1].rows * pyramids_scale));
+            pyr1.push_back(img1_pyr);//将缩放后图像保存
+            pyr2.push_back(img2_pyr);//
+        }
+    }
+    chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
+    chrono::duration<double> time_used = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
+    cout << "build pyramid time:" << time_used.count() << "seconds" << endl;
+
+    vector<cv::KeyPoint> kp1_pyr, kp2_pyr;
+    //关键点坐标缩放平方倍
+    for(auto &kp : kp1){
+        auto kp_top = kp;
+        kp_top.pt *= scales[pyramids - 1];//相应图层坐标缩放
+        kp1_pyr.push_back(kp_top);
+        kp2_pyr.push_back(kp_top);
+    }
+
+    for (int level = pyramids - 1; level >= 0; level--){
+        success.clear();
+        t1 = chrono::steady_clock::now();
+        OpticalFlowSingle(pyr1[level], pyr2[level], kp1_pyr, kp2_pyr, success, inverse, true);
+        t2 = chrono::steady_clock::now();
+        time_used = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
+        cout << "track  pyr:" << level << "cost time:" << time_used.count() << "seconds" << endl;
+
+        if(level > 0){
+            for(auto &kp:kp1_pyr)
+                kp.pt /= pyramids_scale;
+            for(auto &kp:kp2_pyr)
+                kp.pt /= pyramids_scale;
+        }
+    }
+
+    for(auto &kp:kp2_pyr)
+        kp2.push_back(kp);
+}
