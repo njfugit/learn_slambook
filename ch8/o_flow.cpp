@@ -1,7 +1,7 @@
 /*
  * @Author: Jack
  * @Date: 2022-07-27 23:45:36
- * @LastEditTime: 2022-07-29 22:26:17
+ * @LastEditTime: 2022-08-02 20:58:28
  * @LastEditors: your name
  * @FilePath: /ch8/o_flow.cpp
  * 可以输入预定的版权声明、个性签名、空行等
@@ -41,14 +41,13 @@ class OpticalFlowTracker
 };
 /**
  * @brief 
- * 
  * @param img1 
  * @param img2 
  * @param kp1 
  * @param kp2 
  * @param success  success true if a keypoint is tracked successfully
- * @param inverse  inverse set true to enable inverse formulation
- * @param has_initial 
+ * @param inverse  inverse set true to enable inverse formulation 只用第一张图的梯度
+ * @param has_initial 　是否初始化
  */
 void OpticalFlowSingle(const cv::Mat &img1,
                        const cv::Mat &img2,
@@ -104,7 +103,7 @@ int main(int argc, char **argv){
     vector<cv::KeyPoint> kp2_multi;
     vector<bool> success_multi;
     chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
-    OpticalFlowMulti(img1, img2, kp1, kp2_multi, success_multi, true);
+    OpticalFlowMulti(img1, img2, kp1, kp2_multi, success_multi, true);//多层采用反向光流
     chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
     chrono::duration<double> time_used = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
 
@@ -124,7 +123,7 @@ int main(int argc, char **argv){
 
     //画出单层、多层以及opencv实现的区别
     cv::Mat img2_single;
-    cv::cvtColor(img2, img2_single,cv::COLOR_GRAY2BGR);
+    cv::cvtColor(img2, img2_single,cv::COLOR_GRAY2BGR);//将会灰度图转成彩色图
     for (int i = 0; i < kp2_single.size(); i++){
         if(success_single[i]){
             cv::circle(img2_single, kp2_single[i].pt, 2, cv::Scalar(0, 250, 0), 2);
@@ -163,7 +162,7 @@ void OpticalFlowSingle(
     const vector<cv::KeyPoint> &kp1,
     vector<cv::KeyPoint> &kp2,
     vector<bool> &success,
-    bool inverse = false, 
+    bool inverse = false,
     bool has_initial = false){
     kp2.resize(kp1.size());
     success.resize(kp1.size());
