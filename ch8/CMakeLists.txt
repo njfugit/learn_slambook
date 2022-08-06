@@ -27,3 +27,6 @@ target_link_libraries(o_flow ${OpenCV_LIBS})
 
 add_executable(direct_method direct_method.cpp)
 target_link_libraries(direct_method ${OpenCV_LIBS} ${Pangolin_LIBRARIES} fmt::fmt)
+
+add_executable(direct direct.cpp)
+target_link_libraries(direct ${OpenCV_LIBS} ${Pangolin_LIBRARIES} fmt::fmt)
