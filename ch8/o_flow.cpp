@@ -2,7 +2,7 @@
  * @Author: Jack
  * @Date: 2022-07-27 23:45:36
 <<<<<<< HEAD
- * @LastEditTime: 2022-08-02 20:58:28
+ * @LastEditTime: 2022-08-14 01:42:13
 =======
  * @LastEditTime: 2022-08-01 01:14:47
 >>>>>>> 7a0f66753985a70a31295ab0fd02c7578ef6ef3d
@@ -51,7 +51,7 @@ class OpticalFlowTracker
  * @param kp2 
  * @param success  success true if a keypoint is tracked successfully
  * @param inverse  inverse set true to enable inverse formulation 只用第一张图的梯度
- * @param has_initial 　是否初始化
+ *
  */
 void OpticalFlowSingle(const cv::Mat &img1,
                        const cv::Mat &img2,
@@ -59,7 +59,7 @@ void OpticalFlowSingle(const cv::Mat &img1,
                        vector<cv::KeyPoint> &kp2,
                        vector<bool> &success,
                        bool inverse = false, 
-                       bool has_initial = false);
+                       bool has_initial_guess = false);
 
 void OpticalFlowMulti(const cv::Mat &img1,
                       const cv::Mat &img2,
@@ -81,8 +81,8 @@ inline float GetPixelValue(const cv::Mat &img, float x, float y){
     int y_a1 = min(img.cols - 1, int(y) + 1);
 
      //双线性插值　（x, y）(x+1, y) (x, y+1) (x+1, y+1)
-    float x = floor(x);
-    float y = floor(y);
+    //int x = floor(x);
+    //int y = floor(y);
 
     return (1 - xx) * (1 - yy) * img.at<uchar>(y, x) 
     + xx * (1 - yy) * img.at<uchar>(y, x_a1) 
@@ -160,14 +160,9 @@ int main(int argc, char **argv){
     return 0;
 }
 
-void OpticalFlowSingle(
-    const cv::Mat &img1,
-    const cv::Mat &img2,
-    const vector<cv::KeyPoint> &kp1,
-    vector<cv::KeyPoint> &kp2,
-    vector<bool> &success,
-    bool inverse = false,
-    bool has_initial = false){
+void OpticalFlowSingle(const cv::Mat &img1,const cv::Mat &img2,const vector<cv::KeyPoint> &kp1,vector<cv::KeyPoint> &kp2,
+                       vector<bool> &success,bool inverse,bool has_initial)
+{
     kp2.resize(kp1.size());
     success.resize(kp1.size());
     OpticalFlowTracker tracker(img1, img2, kp1, kp2, success, inverse, has_initial);
@@ -257,13 +252,9 @@ void OpticalFlowTracker::calculateOpticalFlow(const cv::Range &range){
     }
 }
 
-void OpticalFlowMulti(
-    const cv::Mat &img1,
-    const cv::Mat &img2,
-    const vector<cv::KeyPoint> &kp1,
-    vector<cv::KeyPoint> &kp2,
-    vector<bool> &success,
-    bool inverse = false){
+void OpticalFlowMulti(const cv::Mat &img1,const cv::Mat &img2,const vector<cv::KeyPoint> &kp1,
+vector<cv::KeyPoint> &kp2,vector<bool> &success,bool inverse)
+{
 
     int pyramids = 4;//金字塔层数
     double pyramids_scale = 0.5;

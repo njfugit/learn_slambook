@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(ch8)
 
-set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_BUILD_TYPE "Debug")
 add_definitions("-DENABLE_SSE")
 set(CMAKE_CXX_FLAGS "-std=c++14 ${SSE_FLAGS} -g -O3 -march=native")
 
@@ -28,5 +28,5 @@ target_link_libraries(o_flow ${OpenCV_LIBS})
 add_executable(direct_method direct_method.cpp)
 target_link_libraries(direct_method ${OpenCV_LIBS} ${Pangolin_LIBRARIES} fmt::fmt)
 
-add_executable(direct direct.cpp)
-target_link_libraries(direct ${OpenCV_LIBS} ${Pangolin_LIBRARIES} fmt::fmt)
+# add_executable(direct direct.cpp)
+# target_link_libraries(direct ${OpenCV_LIBS} ${Pangolin_LIBRARIES} fmt::fmt)
