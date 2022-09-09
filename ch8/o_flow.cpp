@@ -2,7 +2,7 @@
  * @Author: Jack
  * @Date: 2022-07-27 23:45:36
 <<<<<<< HEAD
- * @LastEditTime: 2022-08-16 17:16:57
+ * @LastEditTime: 2022-09-02 01:07:49
 =======
  * @LastEditTime: 2022-08-01 01:14:47
 >>>>>>> 7a0f66753985a70a31295ab0fd02c7578ef6ef3d
@@ -86,7 +86,7 @@ inline float GetPixelValue(const cv::Mat &img, float x, float y)
     // int x = floor(x);
     // int y = floor(y);
 
-    return (1 - xx) * (1 - yy) * img.at<uchar>(y, x) + xx * (1 - yy) * img.at<uchar>(y, x_a1) + (1 - xx) * yy * img.at<uchar>(y_a1, x) + xx * yy * img.at<uchar>(y_a1, x_a1);
+    return (1 - xx) * (1 - yy) * img.at<uchar>(int(y), int(x)) + xx * (1 - yy) * img.at<uchar>(int(y), x_a1) + (1 - xx) * yy * img.at<uchar>(y_a1, int(x)) + xx * yy * img.at<uchar>(y_a1, x_a1);
 }
 
 int main(int argc, char **argv)

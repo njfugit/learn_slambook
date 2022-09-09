@@ -24,8 +24,7 @@ public:
         vector<KeyPoint> &kp2_,
         vector<bool> &success_,
         bool inverse_ = true, bool has_initial_ = false) :
-        img1(img1_), img2(img2_), kp1(kp1_), kp2(kp2_), success(success_), inverse(inverse_),
-        has_initial(has_initial_) {}
+        img1(img1_), img2(img2_), kp1(kp1_), kp2(kp2_), success(success_), inverse(inverse_), has_initial(has_initial_) {}
 
     void calculateOpticalFlow(const Range &range);
 
@@ -35,8 +34,8 @@ private:
     const vector<KeyPoint> &kp1;
     vector<KeyPoint> &kp2;
     vector<bool> &success;
-    bool inverse = true;
-    bool has_initial = false;
+    bool inverse;
+    bool has_initial;
 };
 
 /**
@@ -89,17 +88,17 @@ inline float GetPixelValue(const cv::Mat &img, float x, float y) {
     // boundary check
     if (x < 0) x = 0;
     if (y < 0) y = 0;
-    if (x >= img.cols - 1) x = img.cols - 2;
-    if (y >= img.rows - 1) y = img.rows - 2;
+    if (x >= img.cols - 1) x = img.cols - 1;
+    if (y >= img.rows - 1) y = img.rows - 1;
     
     float xx = x - floor(x);
     float yy = y - floor(y);
     int x_a1 = std::min(img.cols - 1, int(x) + 1);
     int y_a1 = std::min(img.rows - 1, int(y) + 1);
     
-    return (1 - xx) * (1 - yy) * img.at<uchar>(y, x)
-    + xx * (1 - yy) * img.at<uchar>(y, x_a1)
-    + (1 - xx) * yy * img.at<uchar>(y_a1, x)
+    return (1 - xx) * (1 - yy) * img.at<uchar>(int(y), int(x))
+    + xx * (1 - yy) * img.at<uchar>(int(y), x_a1)
+    + (1 - xx) * yy * img.at<uchar>(y_a1, int(x))
     + xx * yy * img.at<uchar>(y_a1, x_a1);
 }
 
